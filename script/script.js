@@ -1,5 +1,9 @@
 'use strict';
 
+const DAY_ARRAY = ['день', 'дня', 'дней'],
+  YES_NO_ARRAY = ['Нет', 'Да'];
+
+
 const DATA = {
   whichSite: ['landing', 'multiPage', 'onlineStore'],
   price: [4000, 8000, 26000],
@@ -10,7 +14,11 @@ const DATA = {
   metrikaYandex: [500, 1000, 2000],
   analyticsGoogle: [850, 1350, 3000],
   sendOrder: 500,
-  deadlineDay: [[2, 7], [3, 10], [7, 10]],
+  deadlineDay: [
+    [2, 7],
+    [3, 10],
+    [7, 10]
+  ],
   deadlinePercent: [20, 17, 15]
 };
 
@@ -23,9 +31,18 @@ const startButton = document.querySelector('.start-button'),
   fastRange = document.querySelector('.fast-range'),
   totalPriceSum = document.querySelector('.total_price__sum'),
   adapt = document.getElementById('adapt'),
-  mobileTemplates = document.getElementById('mobileTemplates');
+  mobileTemplates = document.getElementById('mobileTemplates'),
+  typeSite = document.querySelector('.type-site'),
+  maxDeadline = document.querySelector('.max-deadline'),
+  rangeDeadline = document.querySelector('.range-deadline'),
+  deadlineValue = document.querySelector('.deadline-value'),
+  yesNoCheckbox = document.querySelectorAll('.yes-no-checkbox'),
+  yesNoString = document.querySelectorAll('.yes-no-string');
 
-
+function declOfNum(n, titles) {
+  return n + ' ' + titles[n % 10 === 1 && n % 100 !== 11 ?
+    0 : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 1 : 2];
+}
 
 function showElem(el) {
   el.style.display = 'block';
@@ -35,90 +52,132 @@ function hideElem(el) {
   el.style.display = 'none';
 }
 
-function priceCalc(el) {
-  let result = 0;
-  let index = 0;
-  let options = [];
+function changeYesNo(event) {
 
-  if (el.name === 'whichSite') {
-    for (const item of formCalc.elements) {
-      if (item.type === 'checkbox') {
-        item.checked = false;
+  if (event.target.checked) {
+    for (const el of yesNoString) {
+      if (el.value === event.target.dataset.val) {
+        el.textContent = YES_NO_ARRAY[1];
       }
     }
-    hideElem(fastRange);
-  }
-
-  
-
-  for (const item of formCalc.elements) {
-    if (item.name === 'whichSite' && item.checked) {
-      index = DATA.whichSite.indexOf(item.value);
-    } else if (item.classList.contains('calc-handler') && item.checked) {
-      options.push(item.value);
+  } else {
+    for (const el of yesNoString) {
+      if (el.value === event.target.dataset.val) {
+        el.textContent = YES_NO_ARRAY[0];
+      }
     }
   }
-  
-  options.forEach((key) => {
-    if (typeof(DATA[key]) === 'number') {
-      if (key === 'sendOrder') {
-        result += DATA[key];
-      } else {
-        result += DATA.price[index] * DATA[key]/100; 
-      }
-    } else {
-      if (key === 'desktopTemplates') {
-        result += DATA.price[index] * DATA[key][index] / 100;
-      } else {
-        result += DATA[key][index];
-      }
-    }
-  });
-
-  result += DATA.price[index];
-  totalPriceSum.textContent = result;
 }
 
- 
-
-function handlerCBForm(event) {
-  const target = event.target;
-
-  if (target.classList.contains('want-faster')) {
-    target.checked ? showElem(fastRange) : hideElem(fastRange);
+  function renderYesNo() {
+    for (const el of yesNoCheckbox) {
+      el.addEventListener('change', changeYesNo);
+    }
   }
 
-  if (target.classList.contains('calc-handler')) {
-    priceCalc(target);
+
+  function renderTextContent(total, site, maxDay, minDay) {
+    totalPriceSum.textContent = total;
+    typeSite.textContent = site;
+    maxDeadline.textContent = declOfNum(maxDay, DAY_ARRAY);
+    rangeDeadline.min = minDay;
+    rangeDeadline.max = maxDay;
+    deadlineValue.textContent = declOfNum(rangeDeadline.value, DAY_ARRAY);
+    renderYesNo();
   }
 
-  if (target.id === 'adapt') {
-      if (adapt.checked) {
+  function priceCalc(el) {
+    let result = 0;
+    let index = 0;
+    let options = [];
+    let site = '';
+    let maxDeadlineDay = DATA.deadlineDay[index][1];
+    let minDeadlineDay = DATA.deadlineDay[index][0];
+    // let yesNo = '';
+
+    if (el.name === 'whichSite') {
+      for (const item of formCalc.elements) {
+        if (item.type === 'checkbox') {
+          item.checked = false;
+          mobileTemplates.disabled = true;
+        }
+      }
+      hideElem(fastRange);
+    }
+
+    for (const item of formCalc.elements) {
+      if (item.name === 'whichSite' && item.checked) {
+        index = DATA.whichSite.indexOf(item.value);
+        site = item.dataset.site;
+        maxDeadlineDay = DATA.deadlineDay[index][1];
+        minDeadlineDay = DATA.deadlineDay[index][0];
+      } else if (item.classList.contains('calc-handler') && item.checked) {
+        options.push(item.value);
+      }
+    }
+
+    options.forEach((key) => {
+      if (typeof (DATA[key]) === 'number') {
+        if (key === 'sendOrder') {
+          result += DATA[key];
+        } else {
+          result += DATA.price[index] * DATA[key] / 100;
+        }
+      } else {
+        if (key === 'desktopTemplates') {
+          result += DATA.price[index] * DATA[key][index] / 100;
+        } else {
+          result += DATA[key][index];
+        }
+      }
+    });
+
+    result += DATA.price[index];
+
+    renderTextContent(result, site, maxDeadlineDay, minDeadlineDay);
+
+  }
+
+
+
+  function handlerCBForm(event) {
+    const target = event.target;
+
+    if (target.classList.contains('want-faster')) {
+      target.checked ? showElem(fastRange) : hideElem(fastRange);
+    }
+
+    if (target.classList.contains('calc-handler')) {
+      priceCalc(target);
+    }
+
+    if (target.id === 'adapt') {
+      if (!adapt.checked) {
+        mobileTemplates.disabled = true;
+      } else {
         mobileTemplates.disabled = false;
         mobileTemplates.checked = false;
-      } else {
-        mobileTemplates.disabled = true;
       }
-  }
-
-}
-
-
-
-startButton.addEventListener('click', function() {
-  showElem(mainForm);
-  hideElem(firstScreen);
-});
-
-endButton.addEventListener('click', function() {
-  for (const elem of formCalc.elements) {
-    if (elem.tagName === 'FIELDSET') {
-      hideElem(elem);
     }
+
   }
 
-  showElem(total);
 
-});
 
-formCalc.addEventListener('change', handlerCBForm);
+  startButton.addEventListener('click', function () {
+    showElem(mainForm);
+    hideElem(firstScreen);
+  });
+
+  endButton.addEventListener('click', function () {
+    for (const elem of formCalc.elements) {
+      if (elem.tagName === 'FIELDSET') {
+        hideElem(elem);
+      }
+    }
+
+    showElem(total);
+
+  });
+
+  formCalc.addEventListener('change', handlerCBForm);
